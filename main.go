@@ -56,7 +56,7 @@ func showMainHelp() {
 }
 
 func runSend(args []string) error {
-	var token, chatID, text string
+	var token, chatID, text, textFile string
 	var showHelp bool
 
 	// 解析参数
@@ -75,6 +75,8 @@ func runSend(args []string) error {
 				chatID = value
 			case "--text":
 				text = value
+			case "--text-file":
+				textFile = value
 			default:
 				return fmt.Errorf("未知选项: %s", key)
 			}
@@ -102,6 +104,12 @@ func runSend(args []string) error {
 			}
 			text = args[i+1]
 			i++
+		case "--text-file":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--text-file 需要参数值")
+			}
+			textFile = args[i+1]
+			i++
 		default:
 			if strings.HasPrefix(arg, "-") {
 				return fmt.Errorf("未知选项: %s", arg)
@@ -125,8 +133,21 @@ func runSend(args []string) error {
 	if chatID == "" {
 		return fmt.Errorf("--chat-id 是必填参数")
 	}
+
+	// 处理 --text-file
+	if textFile != "" {
+		if text != "" {
+			return fmt.Errorf("--text 和 --text-file 不能同时使用")
+		}
+		content, err := os.ReadFile(textFile)
+		if err != nil {
+			return fmt.Errorf("读取文件失败: %w", err)
+		}
+		text = string(content)
+	}
+
 	if text == "" {
-		return fmt.Errorf("--text 是必填参数")
+		return fmt.Errorf("--text 或 --text-file 必须指定一个")
 	}
 
 	return sendMessage(token, chatID, text)
@@ -136,13 +157,15 @@ func showSendHelp() {
 	fmt.Fprintf(os.Stderr, "用法: %s send [选项]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "发送消息到 Telegram Bot\n\n")
 	fmt.Fprintf(os.Stderr, "选项:\n")
-	fmt.Fprintf(os.Stderr, "  --token <token>      Bot Token (必填)\n")
-	fmt.Fprintf(os.Stderr, "  --chat-id <id>       Chat ID (必填)\n")
-	fmt.Fprintf(os.Stderr, "  --text <message>     消息内容 (必填)\n")
-	fmt.Fprintf(os.Stderr, "  -h|--help            显示帮助信息\n\n")
+	fmt.Fprintf(os.Stderr, "  --token <token>         Bot Token (必填)\n")
+	fmt.Fprintf(os.Stderr, "  --chat-id <id>          Chat ID (必填)\n")
+	fmt.Fprintf(os.Stderr, "  --text <message>        消息内容 (--text 或 --text-file 必填其一)\n")
+	fmt.Fprintf(os.Stderr, "  --text-file <file>      从文件读取消息内容\n")
+	fmt.Fprintf(os.Stderr, "  -h|--help               显示帮助信息\n\n")
 	fmt.Fprintf(os.Stderr, "示例:\n")
 	fmt.Fprintf(os.Stderr, "  %s send --token=\"YOUR_BOT_TOKEN\" --chat-id=\"YOUR_CHAT_ID\" --text=\"Hello World\"\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "  %s send --token \"TOKEN\" --chat-id \"ID\" --text \"Hello World\"\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "  %s send --token=\"TOKEN\" --chat-id=\"ID\" --text-file=\"/path/to/message.txt\"\n", os.Args[0])
 }
 
 func sendMessage(token, chatID, text string) error {
