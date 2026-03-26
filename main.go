@@ -62,6 +62,25 @@ func runSend(args []string) error {
 	// 解析参数
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
+
+		// 处理 --key=value 格式
+		if strings.Contains(arg, "=") {
+			parts := strings.SplitN(arg, "=", 2)
+			key := parts[0]
+			value := parts[1]
+			switch key {
+			case "--token":
+				token = value
+			case "--chat-id":
+				chatID = value
+			case "--text":
+				text = value
+			default:
+				return fmt.Errorf("未知选项: %s", key)
+			}
+			continue
+		}
+
 		switch arg {
 		case "-h", "--help":
 			showHelp = true
